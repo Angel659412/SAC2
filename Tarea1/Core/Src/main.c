@@ -68,6 +68,8 @@ static void MX_USB_PCD_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 int state = 0;
+int button2 = 0;
+int button2Anterior = 0;
 /* USER CODE END 0 */
 
 /**
@@ -116,8 +118,22 @@ int main(void)
 	  if(state == 1){
 		  HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_7); //Complemento el pin
 		  HAL_Delay(500); //500ms = 0,5s = 2Hz
+		  if(button2 != button2Anterior){ //Compruebo si ha cambiado el estado del boton 2
+			  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_RESET); //Apago el pin
+			  state = 0; //Pongo el estado a 0 que es el estado apagado
+			  button2Anterior = button2; //Actualizo el estado del botón
+		  }
 	  } else {
 		  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_RESET); //Apago el pin
+		  if(button2 != button2Anterior){ //Compruebo si ha cambiado el estado del botón 2
+			  for(int i = 0; i < 3; i++){ //For de 3 iteraciones para que parpadee 3 veces
+				  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_SET); //Apago el pin
+				  HAL_Delay(500);
+				  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_RESET); //Apago el pin
+				  HAL_Delay(500);
+			  }
+			  button2Anterior = button2; //Actualizo el estado del botón
+		  }
 	  }
     /* USER CODE BEGIN 3 */
   }
@@ -528,7 +544,16 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 void HAL_GPIO_EXTI_Rising_Callback(uint16_t GPIO_Pin)
 {
-	state = state==0?1:0;
+	if(GPIO_Pin == GPIO_PIN_13)
+	{
+		state = state==0?1:0;
+
+	} else {
+
+		button2 = button2==0?1:0;
+
+
+	}
 }
 /* USER CODE END 4 */
 
