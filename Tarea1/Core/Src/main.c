@@ -67,7 +67,7 @@ static void MX_USB_PCD_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+int state = 0;
 /* USER CODE END 0 */
 
 /**
@@ -113,7 +113,12 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-
+	  if(state == 1){
+		  HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_7); //Complemento el pin
+		  HAL_Delay(500); //500ms = 0,5s = 2Hz
+	  } else {
+		  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_RESET); //Apago el pin
+	  }
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -521,7 +526,10 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+void HAL_GPIO_EXTI_Rising_Callback(uint16_t GPIO_Pin)
+{
+	state = state==0?1:0;
+}
 /* USER CODE END 4 */
 
 /**
