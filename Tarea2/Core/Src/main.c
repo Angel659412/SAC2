@@ -78,6 +78,8 @@ int state2(void); //Funcion del segundo estado
 int state3(void); //Funcion del tercero estado
 int state4(void); //Funcion del cuarto estado
 
+int lookup_transitions(int cur_state, int rc);
+
 int (* state[])(void) = {state1, state2, state3, state4}; //Array de punteros a las funciones
 enum state_codes {one, two, three, four}; //Un enumerado que hacer referencia a cada uno de los estados
 
@@ -131,7 +133,6 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-  ITM_Port32(31) = 1;
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
@@ -143,15 +144,16 @@ int main(void)
   MX_UCPD1_Init();
   MX_USB_PCD_Init();
   /* USER CODE BEGIN 2 */
-  printf("GPIO Init Done \r\n");
-  ITM_Port32(31) = 2;
+
 
 
   enum state_codes cur_state = ENTRY_STATE; //Estado en el que empiezo
+  enum state_codes last_state = ENTRY_STATE;
   enum ret_codes rc; //Transición de un estado a otro
   int (* state_fun)(void); //Puntero de la funcion del estado actual
 
-
+  printf("You are in state");
+  printf("%i\r\n", cur_state);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -159,9 +161,16 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
+	  if(last_state != cur_state)
+	  {
+		  printf("You are in state");
+		  printf("%i\r\n", cur_state);
+
+		  last_state = cur_state;
+	  }
 	  state_fun = state[cur_state]; //state_fun busca en el array de punteros a funciones que funcion tiene que ejecutar segun el estado actual
 	  rc = state_fun(); //Ejecución de la función del estado actual
-	  //cur_state = lookup_transitions(cur_state, rc);
+	  cur_state = lookup_transitions(cur_state, rc);
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -582,14 +591,19 @@ int _write(int file, char *ptr, int len)
 int state1(void)
 {
 	//Enciendo L1 y apago L0
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_SET);
+
 	enum ret_codes rc;
 	if(btn1 != btn1Anterior) //Si cambia el valor el boton se ha pulsado
 	{
 		rc = button1;
+		btn1Anterior = btn1;
 	}
-	else if(btn1 != btn2Anterior) //Si cambia el valor el boton se ha pulsado
+	else if(btn2 != btn2Anterior) //Si cambia el valor el boton se ha pulsado
 	{
 		rc = button2;
+		btn2Anterior = btn2;
 	}
 	else //Repito si no ha sido pulsado ningún botón
 	{
@@ -602,19 +616,76 @@ int state1(void)
 int state2(void)
 {
 	//Enciendo L0 y apago L1
-	return 0;
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_RESET);
+
+	enum ret_codes rc;
+		if(btn1 != btn1Anterior) //Si cambia el valor el boton se ha pulsado
+		{
+			rc = button1;
+			btn1Anterior = btn1;
+		}
+		else if(btn2 != btn2Anterior) //Si cambia el valor el boton se ha pulsado
+		{
+			rc = button2;
+			btn2Anterior = btn2;
+		}
+		else //Repito si no ha sido pulsado ningún botón
+		{
+			rc = repeat;
+		}
+
+		return rc; //Devuelvo la transición
 }
 
 int state3(void)
 {
 	//Enciendo L0 y L1
-	return 0;
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_SET);
+
+	enum ret_codes rc;
+		if(btn1 != btn1Anterior) //Si cambia el valor el boton se ha pulsado
+		{
+			rc = button1;
+			btn1Anterior = btn1;
+		}
+		else if(btn2 != btn2Anterior) //Si cambia el valor el boton se ha pulsado
+		{
+			rc = button2;
+			btn2Anterior = btn2;
+		}
+		else //Repito si no ha sido pulsado ningún botón
+		{
+			rc = repeat;
+		}
+
+		return rc; //Devuelvo la transición
 }
 
 int state4(void)
 {
 	//Apago L0 y L1
-	return 0;
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_RESET);
+
+	enum ret_codes rc;
+		if(btn1 != btn1Anterior) //Si cambia el valor el boton se ha pulsado
+		{
+			rc = button1;
+			btn1Anterior = btn1;
+		}
+		else if(btn2 != btn2Anterior) //Si cambia el valor el boton se ha pulsado
+		{
+			rc = button2;
+			btn2Anterior = btn2;
+		}
+		else //Repito si no ha sido pulsado ningún botón
+		{
+			rc = repeat;
+		}
+
+		return rc; //Devuelvo la transición
 }
 
 void HAL_GPIO_EXTI_Rising_Callback(uint16_t GPIO_Pin)
@@ -629,7 +700,7 @@ void HAL_GPIO_EXTI_Rising_Callback(uint16_t GPIO_Pin)
 	}
 }
 
-enum state_codes lookup_transitions(enum state_codes cur_state,enum ret_codes rc)
+int lookup_transitions(int cur_state,int rc)
 {
 	enum state_codes nrc;
 
@@ -643,23 +714,7 @@ enum state_codes lookup_transitions(enum state_codes cur_state,enum ret_codes rc
 	}
 
 	return nrc;
-	/*
-	enum ret_code nrc;
-		if(btn1 != btn1Anterior)
-		{
-			rc = button1;
-		}
-		else if(btn1 != btn2Anterior)
-		{
-			rc = button2;
-		}
-		else
-		{
-			rc = repeat;
-		}
 
-		return rc;
-		*/
 }
 /* USER CODE END 4 */
 
