@@ -67,8 +67,11 @@ static void MX_USB_PCD_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-uint16_t Loop = 0;
-uint16_t Data = 0;
+int btn1 = 0;
+int btn2 = 0;
+
+int btn1Anterior = 0;
+int btn2Anterior = 0;
 
 int state1(void); //Funcion del primer estado
 int state2(void); //Funcion del segundo estado
@@ -85,7 +88,7 @@ struct transition { //Un struct con la respectiva transicion, desde el origen, e
 	enum state_codes dst_state;
 };
 
-struct transition state_trasitions[] = { //Un array de las posibles transiciones
+struct transition state_transitions[] = { //Un array de las posibles transiciones
 		{one, button1, four},
 		{one, button2, two},
 		{one, repeat, one},
@@ -101,6 +104,7 @@ struct transition state_trasitions[] = { //Un array de las posibles transiciones
 };
 
 #define ENTRY_STATE one //Estado en el que empiezo
+#define NUMBER_OF_TRANSITIONS 12
 
 /* USER CODE END 0 */
 
@@ -146,6 +150,8 @@ int main(void)
   enum state_codes cur_state = ENTRY_STATE; //Estado en el que empiezo
   enum ret_codes rc; //Transición de un estado a otro
   int (* state_fun)(void); //Puntero de la funcion del estado actual
+
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -576,7 +582,21 @@ int _write(int file, char *ptr, int len)
 int state1(void)
 {
 	//Enciendo L1 y apago L0
-	return 0;
+	enum ret_codes rc;
+	if(btn1 != btn1Anterior) //Si cambia el valor el boton se ha pulsado
+	{
+		rc = button1;
+	}
+	else if(btn1 != btn2Anterior) //Si cambia el valor el boton se ha pulsado
+	{
+		rc = button2;
+	}
+	else //Repito si no ha sido pulsado ningún botón
+	{
+		rc = repeat;
+	}
+
+	return rc; //Devuelvo la transición
 }
 
 int state2(void)
@@ -595,6 +615,51 @@ int state4(void)
 {
 	//Apago L0 y L1
 	return 0;
+}
+
+void HAL_GPIO_EXTI_Rising_Callback(uint16_t GPIO_Pin)
+{
+	if(GPIO_Pin == GPIO_PIN_13)
+	{
+		btn1 = btn1==0?1:0; //Si pulso primer boton cambio su estado
+	}
+	if(GPIO_Pin == GPIO_PIN_14)
+	{
+		btn2 = btn2==0?1:0; //Si pulso segundo boton cambio su estado
+	}
+}
+
+enum state_codes lookup_transitions(enum state_codes cur_state,enum ret_codes rc)
+{
+	enum state_codes nrc;
+
+
+	for(int i = 0; i < NUMBER_OF_TRANSITIONS; i++)
+	{
+		if(state_transitions[i].src_state == cur_state && state_transitions[i].ret_code == rc)
+		{
+			nrc = state_transitions[i].dst_state;
+		}
+	}
+
+	return nrc;
+	/*
+	enum ret_code nrc;
+		if(btn1 != btn1Anterior)
+		{
+			rc = button1;
+		}
+		else if(btn1 != btn2Anterior)
+		{
+			rc = button2;
+		}
+		else
+		{
+			rc = repeat;
+		}
+
+		return rc;
+		*/
 }
 /* USER CODE END 4 */
 
