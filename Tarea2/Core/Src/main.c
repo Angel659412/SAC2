@@ -21,7 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "stdio.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -36,7 +36,7 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-
+#define ITM_Port32(n)	(*((volatile unsigned long *)(0xE0000000+4*n)))
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -67,6 +67,40 @@ static void MX_USB_PCD_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+uint16_t Loop = 0;
+uint16_t Data = 0;
+
+int state1(void); //Funcion del primer estado
+int state2(void); //Funcion del segundo estado
+int state3(void); //Funcion del tercero estado
+int state4(void); //Funcion del cuarto estado
+
+int (* state[])(void) = {state1, state2, state3, state4}; //Array de punteros a las funciones
+enum state_codes {one, two, three, four}; //Un enumerado que hacer referencia a cada uno de los estados
+
+enum ret_codes {button1, button2, repeat}; //Código que describira la transicion de un estado a otro
+struct transition { //Un struct con la respectiva transicion, desde el origen, el motivo del cambio de estado y el estado destino
+	enum state_codes src_state;
+	enum ret_codes ret_code;
+	enum state_codes dst_state;
+};
+
+struct transition state_trasitions[] = { //Un array de las posibles transiciones
+		{one, button1, four},
+		{one, button2, two},
+		{one, repeat, one},
+		{two, button1, one},
+		{two, button2, three},
+		{two, repeat, two},
+		{three, button1, two},
+		{three, button2, four},
+		{three, repeat, three},
+		{four, button1, three},
+		{four, button2, one},
+		{four, repeat, four}
+};
+
+#define ENTRY_STATE one //Estado en el que empiezo
 
 /* USER CODE END 0 */
 
@@ -93,7 +127,7 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-
+  ITM_Port32(31) = 1;
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
@@ -105,7 +139,13 @@ int main(void)
   MX_UCPD1_Init();
   MX_USB_PCD_Init();
   /* USER CODE BEGIN 2 */
+  printf("GPIO Init Done \r\n");
+  ITM_Port32(31) = 2;
 
+
+  enum state_codes cur_state = ENTRY_STATE; //Estado en el que empiezo
+  enum ret_codes rc; //Transición de un estado a otro
+  int (* state_fun)(void); //Puntero de la funcion del estado actual
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -113,7 +153,9 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-
+	  state_fun = state[cur_state]; //state_fun busca en el array de punteros a funciones que funcion tiene que ejecutar segun el estado actual
+	  rc = state_fun(); //Ejecución de la función del estado actual
+	  //cur_state = lookup_transitions(cur_state, rc);
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -521,7 +563,39 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+int _write(int file, char *ptr, int len)
+{
+	int DataIdx;
 
+	for(DataIdx=0; DataIdx<len; DataIdx++){
+		ITM_SendChar(*ptr++);
+	}
+	return len;
+}
+
+int state1(void)
+{
+	//Enciendo L1 y apago L0
+	return 0;
+}
+
+int state2(void)
+{
+	//Enciendo L0 y apago L1
+	return 0;
+}
+
+int state3(void)
+{
+	//Enciendo L0 y L1
+	return 0;
+}
+
+int state4(void)
+{
+	//Apago L0 y L1
+	return 0;
+}
 /* USER CODE END 4 */
 
 /**
