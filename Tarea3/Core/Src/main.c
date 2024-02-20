@@ -46,7 +46,7 @@ DMA_HandleTypeDef hdma_adc1;
 TIM_HandleTypeDef htim2;
 
 /* USER CODE BEGIN PV */
-
+#define ADC_CONVERTED_DATA_BUFFER_SIZE 1024
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -62,7 +62,7 @@ static void MX_TIM2_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+uint16_t aADCxConvertedData[ADC_CONVERTED_DATA_BUFFER_SIZE];
 /* USER CODE END 0 */
 
 /**
@@ -98,7 +98,20 @@ int main(void)
   MX_ICACHE_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
+  if (HAL_TIM_Base_Start(&htim2) != HAL_OK)
+  {
+    /* Counter enable error */
+    Error_Handler();
+  }
 
+  if (HAL_ADC_Start_DMA(&hadc1,
+                          (uint16_t *)aADCxConvertedData,
+                          ADC_CONVERTED_DATA_BUFFER_SIZE
+                         ) != HAL_OK)
+    {
+      /* ADC conversion start error */
+      Error_Handler();
+    }
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -108,6 +121,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	  HAL_Delay(100);
   }
   /* USER CODE END 3 */
 }
