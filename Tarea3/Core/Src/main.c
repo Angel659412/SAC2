@@ -47,10 +47,13 @@ DAC_HandleTypeDef hdac1;
 DMA_HandleTypeDef hdma_dac1_ch1;
 
 TIM_HandleTypeDef htim2;
+TIM_HandleTypeDef htim6;
 
 /* USER CODE BEGIN PV */
-#define ADC_CONVERTED_DATA_BUFFER_SIZE 1024
+#define ADC_CONVERTED_DATA_BUFFER_SIZE 500
 #define DIGITAL_SCALE_12BITS ((uint32_t) 0xFFF)
+#define DAC_CONVERTED_DATA_BUFFER_SIZE 128
+#define PI 3.14159265358979323846
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -61,6 +64,7 @@ static void MX_ADC1_Init(void);
 static void MX_ICACHE_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_DAC1_Init(void);
+static void MX_TIM6_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -70,7 +74,25 @@ static void MX_DAC1_Init(void);
 uint16_t aADCxConvertedData[ADC_CONVERTED_DATA_BUFFER_SIZE];
 int alternar = 0;
 
+uint16_t Wave_LUT[DAC_CONVERTED_DATA_BUFFER_SIZE] = {
+    2048, 2149, 2250, 2350, 2450, 2549, 2646, 2742, 2837, 2929, 3020, 3108, 3193, 3275, 3355,
+    3431, 3504, 3574, 3639, 3701, 3759, 3812, 3861, 3906, 3946, 3982, 4013, 4039, 4060, 4076,
+    4087, 4094, 4095, 4091, 4082, 4069, 4050, 4026, 3998, 3965, 3927, 3884, 3837, 3786, 3730,
+    3671, 3607, 3539, 3468, 3394, 3316, 3235, 3151, 3064, 2975, 2883, 2790, 2695, 2598, 2500,
+    2400, 2300, 2199, 2098, 1997, 1896, 1795, 1695, 1595, 1497, 1400, 1305, 1212, 1120, 1031,
+    944, 860, 779, 701, 627, 556, 488, 424, 365, 309, 258, 211, 168, 130, 97,
+    69, 45, 26, 13, 4, 0, 1, 8, 19, 35, 56, 82, 113, 149, 189,
+    234, 283, 336, 394, 456, 521, 591, 664, 740, 820, 902, 987, 1075, 1166, 1258,
+    1353, 1449, 1546, 1645, 1745, 1845, 1946, 2047
+};
+
+uint16_t LUT[50];
+uint16_t LUTC[5];
+uint16_t LUT10[5];
+
 void Alternar_DAC(void);
+void Crear_LUTC(void);
+void Crear_LUT(void);
 /* USER CODE END 0 */
 
 /**
@@ -106,12 +128,39 @@ int main(void)
   MX_ICACHE_Init();
   MX_TIM2_Init();
   MX_DAC1_Init();
+  MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
+  //Alternar_DAC();
+  //Crear_LUTC();
+  Crear_LUT();
+  int j = 0;
+  for(int i = 0; i < 50; i = i + 10)
+  {
+
+	  LUT10[j] = LUT[i];
+	  j++;
+  }
+
+  if (HAL_TIM_Base_Start(&htim6) != HAL_OK)
+     {
+       /* Counter enable error */
+       Error_Handler();
+     }
+
   if (HAL_TIM_Base_Start(&htim2) != HAL_OK)
   {
     /* Counter enable error */
     Error_Handler();
   }
+
+
+
+
+  if (HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t *)LUT10, 5, DAC_ALIGN_12B_R) != HAL_OK)
+   	     {
+   	       /* Start Error */
+   	       Error_Handler();
+   	     }
 
   if (HAL_ADC_Start_DMA(&hadc1,
                           (uint32_t *)aADCxConvertedData,
@@ -122,18 +171,12 @@ int main(void)
       Error_Handler();
     }
 
-  if (HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_1, DAC_ALIGN_12B_R, DIGITAL_SCALE_12BITS) != HAL_OK)
-    {
-      /* Setting value Error */
-      Error_Handler();
-    }
+
+
+
 
     /* Enable DAC Channel: channel corresponding to ADC channel ADC_CHANNEL_9 */
-    if (HAL_DAC_Start(&hdac1, DAC_CHANNEL_1) != HAL_OK)
-    {
-      /* Start Error */
-      Error_Handler();
-    }
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -145,6 +188,8 @@ int main(void)
     /* USER CODE BEGIN 3 */
 
 	  HAL_Delay(1000);
+
+
   }
   /* USER CODE END 3 */
 }
@@ -295,8 +340,8 @@ static void MX_DAC1_Init(void)
   /** DAC channel OUT1 config
   */
   sConfig.DAC_SampleAndHold = DAC_SAMPLEANDHOLD_DISABLE;
-  sConfig.DAC_Trigger = DAC_TRIGGER_NONE;
-  sConfig.DAC_HighFrequency = DAC_HIGH_FREQUENCY_INTERFACE_MODE_ABOVE_80MHZ;
+  sConfig.DAC_Trigger = DAC_TRIGGER_T6_TRGO;
+  sConfig.DAC_HighFrequency = DAC_HIGH_FREQUENCY_INTERFACE_MODE_DISABLE;
   sConfig.DAC_OutputBuffer = DAC_OUTPUTBUFFER_ENABLE;
   sConfig.DAC_ConnectOnChipPeripheral = DAC_CHIPCONNECT_DISABLE;
   sConfig.DAC_UserTrimming = DAC_TRIMMING_FACTORY;
@@ -363,7 +408,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 109;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 9;
+  htim2.Init.Period = 19;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
@@ -384,6 +429,44 @@ static void MX_TIM2_Init(void)
   /* USER CODE BEGIN TIM2_Init 2 */
 
   /* USER CODE END TIM2_Init 2 */
+
+}
+
+/**
+  * @brief TIM6 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM6_Init(void)
+{
+
+  /* USER CODE BEGIN TIM6_Init 0 */
+
+  /* USER CODE END TIM6_Init 0 */
+
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM6_Init 1 */
+
+  /* USER CODE END TIM6_Init 1 */
+  htim6.Instance = TIM6;
+  htim6.Init.Prescaler = 109;
+  htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim6.Init.Period = 19;
+  htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim6, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM6_Init 2 */
+
+  /* USER CODE END TIM6_Init 2 */
 
 }
 
@@ -496,19 +579,32 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 void Alternar_DAC(void)
 {
+	for(int i = 0; i < 128; i++){
+		Wave_LUT[i] = DIGITAL_SCALE_12BITS;
+	}
 
-	 if (HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_1, DAC_ALIGN_12B_R, DIGITAL_SCALE_12BITS*alternar/4) != HAL_OK)
-	    {
-	      /* Setting value Error */
-	      Error_Handler();
-	    }
+}
 
-	 if(alternar < 4){
-		 alternar = 0;
-	 }
-	 else{
-		 alternar++;
-	 }
+void Crear_LUTC(void)
+{
+	for(int i = 0; i < 5; i++)
+	{
+		if(i < 2){
+			LUTC[i] = 0;
+		}
+		else {
+			LUTC[i] = 1830;
+		}
+
+	}
+}
+
+void Crear_LUT(void)
+{
+	for(int i = 0; i < 50; i++)
+	{
+		LUT[i] = 950 + (int)(950 * sin(2 * PI * i / 50));
+	}
 }
 /* USER CODE END 4 */
 
