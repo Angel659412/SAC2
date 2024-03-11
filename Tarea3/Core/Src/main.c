@@ -50,10 +50,10 @@ TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim6;
 
 /* USER CODE BEGIN PV */
-#define ADC_CONVERTED_DATA_BUFFER_SIZE 500
-#define DIGITAL_SCALE_12BITS ((uint32_t) 0xFFF)
-#define DAC_CONVERTED_DATA_BUFFER_SIZE 128
-#define PI 3.14159265358979323846
+#define ADC_CONVERTED_DATA_BUFFER_SIZE 500 //Tamaño del buffer para el ADC
+#define DIGITAL_SCALE_12BITS ((uint32_t) 0xFFF) //Para el DAC valor máximo
+#define DAC_CONVERTED_DATA_BUFFER_SIZE 128 //Tamaño del buffer para el DAC
+#define PI 3.14159265358979323846 //Numero PI para la senoidal
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -71,10 +71,10 @@ static void MX_TIM6_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-uint16_t aADCxConvertedData[ADC_CONVERTED_DATA_BUFFER_SIZE];
+uint16_t aADCxConvertedData[ADC_CONVERTED_DATA_BUFFER_SIZE]; //Buffer del adc
 int alternar = 0;
 
-uint16_t Wave_LUT[DAC_CONVERTED_DATA_BUFFER_SIZE] = {
+uint16_t Wave_LUT[DAC_CONVERTED_DATA_BUFFER_SIZE] = { //Este es un buffer de prueba para el DAC
     2048, 2149, 2250, 2350, 2450, 2549, 2646, 2742, 2837, 2929, 3020, 3108, 3193, 3275, 3355,
     3431, 3504, 3574, 3639, 3701, 3759, 3812, 3861, 3906, 3946, 3982, 4013, 4039, 4060, 4076,
     4087, 4094, 4095, 4091, 4082, 4069, 4050, 4026, 3998, 3965, 3927, 3884, 3837, 3786, 3730,
@@ -86,13 +86,13 @@ uint16_t Wave_LUT[DAC_CONVERTED_DATA_BUFFER_SIZE] = {
     1353, 1449, 1546, 1645, 1745, 1845, 1946, 2047
 };
 
-uint16_t LUT[50];
-uint16_t LUTC[5];
-uint16_t LUT10[5];
+uint16_t LUT[50]; //LookUp Table de 50 muestras para la señal de 1kHz, como timer a 50kHz para 1kHz necesita 50 muestras. Señal senoidal
+uint16_t LUTC[5]; //LookUp Table de 5 muestras para la señal de 10 kHz, como timer a 50kHz para 10kHz necesita 5 muestras. Señal cuadrada
+uint16_t LUT10[5]; //LookUp Table de 5 muestras para la señal de 10 kHz, como timer a 50kHz para 10kHz necesita 5 muestras. Señal senoidal
 
-void Alternar_DAC(void);
-void Crear_LUTC(void);
-void Crear_LUT(void);
+void Alternar_DAC(void); //funcion de prueba para ver como funciona el DAC
+void Crear_LUTC(void); //funcion que crea la LookUp Table de la señal cuadrada
+void Crear_LUT(void); //funcion que crea la LookUp Table de la señal senoidal de 1kHz
 /* USER CODE END 0 */
 
 /**
@@ -131,25 +131,25 @@ int main(void)
   MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
   //Alternar_DAC();
-  //Crear_LUTC();
-  Crear_LUT();
+  //Crear_LUTC(); //Descomentar esta linea para usar la señal cuadrada
+  Crear_LUT(); //Descomentar esta linea para usar la señal senoidal
   int j = 0;
 
-  for(int i = 0; i < 50; i = i + 10)
+  for(int i = 0; i < 50; i = i + 10) //Descomentar este for para crear la LUT10 para la señal senoidal de 10kHz
   {
 
-	  LUT10[j] = LUT[i];
+	  LUT10[j] = LUT[i]; //Toma 5 muestras de las 50 que teniamos en la LUT de 1 kHz
 	  j++;
   }
 
 
-  if (HAL_TIM_Base_Start(&htim6) != HAL_OK)
+  if (HAL_TIM_Base_Start(&htim6) != HAL_OK) //Inicialización del timer6 para el DAC, configurado para que active el DAC en el flanco de bajada y a 50 kHz
      {
        /* Counter enable error */
        Error_Handler();
      }
 
-  if (HAL_TIM_Base_Start(&htim2) != HAL_OK)
+  if (HAL_TIM_Base_Start(&htim2) != HAL_OK) //Inicializacion del timer2 para el ADC, configurado para que active el ADC en el flanco de bajada y a 50kHz
   {
     /* Counter enable error */
     Error_Handler();
@@ -158,13 +158,13 @@ int main(void)
 
 
 
-  if (HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t *)LUT10, 5, DAC_ALIGN_12B_R) != HAL_OK)
+  if (HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t *)LUT10, 5, DAC_ALIGN_12B_R) != HAL_OK) //Activo el DAC con DMA para el buffer correpondiente (ahora LUT10 para la señal senoidal de 10kHz, cambiar para probar otras tablas seleccionando el correcto tamaño de buffer, usar LUTC para la señal cuadrada o LUT para la senoidal de 1kHz y cambiar el tamaño de 5 a 50)
    	     {
    	       /* Start Error */
    	       Error_Handler();
    	     }
 
-  if (HAL_ADC_Start_DMA(&hadc1,
+  if (HAL_ADC_Start_DMA(&hadc1, //Activo el ADC que metera los datos convertidos en el buffer correspondiente.
                           (uint32_t *)aADCxConvertedData,
                           ADC_CONVERTED_DATA_BUFFER_SIZE
                          ) != HAL_OK)
@@ -582,20 +582,20 @@ static void MX_GPIO_Init(void)
 void Alternar_DAC(void)
 {
 	for(int i = 0; i < 128; i++){
-		Wave_LUT[i] = DIGITAL_SCALE_12BITS;
+		Wave_LUT[i] = DIGITAL_SCALE_12BITS; //Pongo todo el Wave_LUT al maximo que soporta el DAC para probar que toma el máximo valor
 	}
 
 }
 
 void Crear_LUTC(void)
 {
-	for(int i = 0; i < 5; i++)
+	for(int i = 0; i < 5; i++) //For de 5 muestras para generar la señal cuadrada de 10kHz para un timer de 50kHz
 	{
 		if(i < 2){
-			LUTC[i] = 0;
+			LUTC[i] = 0; //0 voltios en el DAC
 		}
 		else {
-			LUTC[i] = 1830;
+			LUTC[i] = 1830; //2 voltios en el DAC aprox.
 		}
 
 	}
@@ -603,9 +603,9 @@ void Crear_LUTC(void)
 
 void Crear_LUT(void)
 {
-	for(int i = 0; i < 50; i++)
+	for(int i = 0; i < 50; i++) //Crea la LUT de 1 kHz, luego se utiliza para crear la de 10kHz en el main
 	{
-		LUT[i] = 950 + (int)(950 * sin(2 * PI * i / 50));
+		LUT[i] = 950 + (int)(950 * sin(2 * PI * i / 50)); //Funcion senoidal con offset en 1 voltio y que va de 0 a 2 voltios aprox.
 	}
 }
 /* USER CODE END 4 */
