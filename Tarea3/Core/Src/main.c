@@ -134,12 +134,14 @@ int main(void)
   //Crear_LUTC();
   Crear_LUT();
   int j = 0;
+
   for(int i = 0; i < 50; i = i + 10)
   {
 
 	  LUT10[j] = LUT[i];
 	  j++;
   }
+
 
   if (HAL_TIM_Base_Start(&htim6) != HAL_OK)
      {
