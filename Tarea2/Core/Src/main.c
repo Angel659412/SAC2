@@ -67,10 +67,10 @@ static void MX_USB_PCD_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-int btn1 = 0;
+int btn1 = 0; //Esto es el estado de los botones al ser pulsados, alterna de 1 a 0
 int btn2 = 0;
 
-int btn1Anterior = 0;
+int btn1Anterior = 0; //Estado anterior de los botones, si es diferente al actual es porque ha habido una pulsación
 int btn2Anterior = 0;
 
 int state1(void); //Funcion del primer estado
@@ -78,7 +78,7 @@ int state2(void); //Funcion del segundo estado
 int state3(void); //Funcion del tercero estado
 int state4(void); //Funcion del cuarto estado
 
-int lookup_transitions(int cur_state, int rc);
+int lookup_transitions(int cur_state, int rc); //Función que comprueba por el estado actual y el ret code para saber a que estado nos movemos
 
 int (* state[])(void) = {state1, state2, state3, state4}; //Array de punteros a las funciones
 enum state_codes {one, two, three, four}; //Un enumerado que hacer referencia a cada uno de los estados
@@ -106,7 +106,7 @@ struct transition state_transitions[] = { //Un array de las posibles transicione
 };
 
 #define ENTRY_STATE one //Estado en el que empiezo
-#define NUMBER_OF_TRANSITIONS 12
+#define NUMBER_OF_TRANSITIONS 12 //Cantidad de transiciones posibles
 
 /* USER CODE END 0 */
 
@@ -148,7 +148,7 @@ int main(void)
 
 
   enum state_codes cur_state = ENTRY_STATE; //Estado en el que empiezo
-  enum state_codes last_state = ENTRY_STATE;
+  enum state_codes last_state = ENTRY_STATE; //Ultimo estado en el que he estado, se usa para saber cuando cambio de estado
   enum ret_codes rc; //Transición de un estado a otro
   int (* state_fun)(void); //Puntero de la funcion del estado actual
 
@@ -161,7 +161,7 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-	  if(last_state != cur_state)
+	  if(last_state != cur_state) //si estoy en un estado diferente manda por consola el estado actual
 	  {
 		  printf("You are in state");
 		  printf("%i\r\n", cur_state);
@@ -170,7 +170,7 @@ int main(void)
 	  }
 	  state_fun = state[cur_state]; //state_fun busca en el array de punteros a funciones que funcion tiene que ejecutar segun el estado actual
 	  rc = state_fun(); //Ejecución de la función del estado actual
-	  cur_state = lookup_transitions(cur_state, rc);
+	  cur_state = lookup_transitions(cur_state, rc); //cambia el estado actual segun la transición que estemos haciendo
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -705,15 +705,15 @@ int lookup_transitions(int cur_state,int rc)
 	enum state_codes nrc;
 
 
-	for(int i = 0; i < NUMBER_OF_TRANSITIONS; i++)
+	for(int i = 0; i < NUMBER_OF_TRANSITIONS; i++) //For que comprueba todas las transiciones
 	{
 		if(state_transitions[i].src_state == cur_state && state_transitions[i].ret_code == rc)
 		{
-			nrc = state_transitions[i].dst_state;
-		}
+			nrc = state_transitions[i].dst_state; //Si encontramos el estado en el que estabamos y el ret code para saber que tipo de transicion estamos haciendo
+		}										  //encontramos el estado siguiente
 	}
 
-	return nrc;
+	return nrc; //devuelvo el siguiente estado
 
 }
 /* USER CODE END 4 */
